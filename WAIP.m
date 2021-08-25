@@ -6,8 +6,6 @@
 % With substantial modifications to interface with Yixang_OOP_pipeline    %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Ashley and I just add this line for fun
-
 %{
 %%Read in ImageJ's roi files and translate into .mat files
 
