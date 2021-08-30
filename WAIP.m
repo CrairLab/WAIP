@@ -1,54 +1,12 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Wave Analysis Integrated Pipeline (WAIP) - Beta Version 0.0.1 (08/25/21)%    
+% Wave Analysis Integrated Pipeline (WAIP) - Beta Version 0.0.2 (08/30/21)%    
 % Author: Yixiang Wang. Email: yixiang.wang@yale.edu                      %
 % Integrating wave analysis code from Xinxin Ge                           %
 % Adapted from github.com/GXinxin/SC-Cortical-activity-detection          %
 % With substantial modifications to interface with Yixang_OOP_pipeline    %
+% Estimate optical flow using Horn-Schunck method (opticalFlowHS)         %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%{
-%%Read in ImageJ's roi files and translate into .mat files
-
-%Direct to the folder of interest
-cd ''
-
-%Choose the roi file to open
-[filename, pathname] = uigetfile('Choose data file to open');
-ROI_original = ReadImageJROI([pathname filename]);
-
-%Input image sizes
-imgSz_y = input('enter the number of rows: ');
-imgSz_x = input('enter the number of columns: ');
-sz = [imgSz_y, imgSz_x];
-
-%Define roi filename (.mat)
-roi_fn = input('input .mat mask file name:', 's');
-
-%Read ROIs
-if length(ROI_original) == 1
-    ROI{1} = ROI_original;
-else
-    ROI = ROI_original;    
-end
-
-%Combine multiple ROI domains if exist
-for i = 1:length(ROI)
-    if isfield(ROI{i}, 'mnCoordinates')
-        roi{i} = poly2mask(ROI{i}.mnCoordinates(:, 1), ROI{i}.mnCoordinates (:, 2), sz(1), sz(2));   
-        roiPolygon{i} = ROI{i}.mnCoordinates;
-        roiName{i} = ROI{i}.strName;
-    else
-        roi{i} = zeros(sz(1), sz(2));
-        roi{i}(ROI{i}.vnRectBounds(1):ROI{i}.vnRectBounds(3), ROI{i}.vnRectBounds(2):ROI{i}.vnRectBounds(4)) = 1;
-        roiName{i} = ROI{i}.strName;
-    end
-    roiName{i} = ROI{i}.strName;
-end
-
-%Save the translated & combined roi as a .mat file
-save([roi_fn, '.mat'], 'roi', 'roiPolygon', 'roiName')
-
-%}
 
 %% Generate binary movies based on different thresholds %%%%%%%%%%%%%%%%%%%
 % Be aware that this pipeline is only compatible with pre-processed movies
@@ -167,6 +125,8 @@ for n = 1:nmov
     fnm = filename;
     cd(outputFolder);
     
+    %curLoad.A_dFoF = reshape(curLoad.dA, [256, 250, 1200]);
+    
     %Get disconnected rois from the loaded movie
     roi = getRoiFromMovie(curLoad.A_dFoF);
     
@@ -182,7 +142,8 @@ for n = 1:nmov
     imgall = reshape(A_z, sz(1), sz(2), sz(3));    
     
     %Computes optic flow field (with normalized vectors) for imgall
-    [normVx, normVy] = computeFlowField_normalized_xx(imgall, sz, smallSize);
+    %[normVx, normVy] = computeFlowField_normalized_xx(imgall, sz, smallSize);
+    [normVx, normVy] = computeFlowField_normalized(imgall, sz, smallSize);
     totalMask = ~isnan(A_z(:,:,1));
     smallMask = imresize(totalMask, smallSize, 'bilinear');
     clear A_z;
@@ -453,7 +414,8 @@ function [total_ActiveMovie, rp] = ...
         if wave_flag
             
             %Compute flow field (without normalization)
-            [AVx, AVy] = computeFlowField_xx(imgall, sz);
+            %[AVx, AVy] = computeFlowField_xx(imgall, sz);
+            [AVx, AVy] = computeFlowField(imgall, sz);
             nDomains = sum(validId{r, n});
             validDomains = CC.PixelIdxList(validId{r, n});
             theta = []; rho = [];
@@ -480,7 +442,7 @@ function [total_ActiveMovie, rp] = ...
             RHO{r, n} = rho;
         
             h = figure; rose(angle{r, n});
-            %set(gca,'YDir','reverse'); % 90 degree is moving downwards
+            set(gca,'YDir','reverse'); % 90 degree is moving downwards
             title(savefn);
             saveas(h, [savefn, '_rosePlot.png'])
             
@@ -540,7 +502,7 @@ function [total_ActiveMovie, rp] = ...
                 end
 
                 pixelDuration{p} = activeOff{p} - activeOn{p};
-
+ 
                 goodId = pixelDuration{p} > 2;
                 activeOn{p} = activeOn{p}(goodId);
                 activeOff{p} = activeOff{p}(goodId);
@@ -602,7 +564,10 @@ function [total_ActiveMovie, rp] = ...
 end
 
 
-function [AVx, AVy] = computeFlowField_xx(imgall, sz)
+
+
+
+function [AVx, AVy] = computeFlowField(imgall, sz)
 % compute flow field 
 % Input:
 %    imagall   dFoF movie
@@ -611,12 +576,12 @@ function [AVx, AVy] = computeFlowField_xx(imgall, sz)
 %    AVx       matrix of x vectors
 %    AVy       matrix of y vectors
 
-    for fr = 1:sz(3)-1 %option:parfor
-        img1 = imgall(:, :, fr);
-        img2 = imgall(:, :, fr+1);
-        flow = opticalFlow(img1, img2);
-        AVx(:, :, fr) = flow.Vx;
-        AVy(:, :, fr) = flow.Vy;
+opticFlow = opticalFlowHS;
+     
+    for f = 1:sz(3)-1 %option:parfor
+        flow = estimateFlow(opticFlow,imgall(:, :, f));
+        AVx(:, :, f) = flow.Vx;
+        AVy(:, :, f) = flow.Vy;
     end
 
     AVx(:, :, sz(3)) = AVx(:, :, end);
@@ -625,8 +590,7 @@ function [AVx, AVy] = computeFlowField_xx(imgall, sz)
 end
 
 
-
-function [normVx, normVy] = computeFlowField_normalized_xx(imgall, sz, resizeRatio)
+function [normVx, normVy] = computeFlowField_normalized(imgall, sz, resizeRatio)
 % computes optic flow field for imgall, vectors normalized before summing
 % up, better for computing the overall directional bias
 % Input:
@@ -639,11 +603,11 @@ function [normVx, normVy] = computeFlowField_normalized_xx(imgall, sz, resizeRat
 
     normVx = [];
     normVy = [];
-
-    for f = 1:sz(3)-1
-        img1 = imgall(:, :, f);
-        img2 = imgall(:, :, f+1);
-        flow = opticalFlow(img1, img2); 
+    opticFlow = opticalFlowHS;
+    
+    for f = 1:sz(3)
+        
+        flow = estimateFlow(opticFlow,imgall(:, :, f));
         Vx = flow.Vx;
         Vy = flow.Vy;
         Vx = imresize(Vx, resizeRatio, 'bilinear');
@@ -660,6 +624,8 @@ function [normVx, normVy] = computeFlowField_normalized_xx(imgall, sz, resizeRat
     end
 
 end
+
+
 
 
 function writeMovie_xx(M, filename, useFFmpeg)
