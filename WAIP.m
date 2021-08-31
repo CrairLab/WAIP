@@ -4,7 +4,7 @@
 % Integrating wave analysis code from Xinxin Ge                           %
 % Adapted from github.com/GXinxin/SC-Cortical-activity-detection          %
 % With substantial modifications to interface with Yixang_OOP_pipeline    %
-% Estimate optical flow using Horn-Schunck method (opticalFlowHS)         %
+% Estimate optical flow using Lucas-Kanade  method (opticalFlowLK)        %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -576,7 +576,7 @@ function [AVx, AVy] = computeFlowField(imgall, sz)
 %    AVx       matrix of x vectors
 %    AVy       matrix of y vectors
 
-opticFlow = opticalFlowHS;
+opticFlow = opticalFlowLK;
      
     for f = 1:sz(3)-1 %option:parfor
         flow = estimateFlow(opticFlow,imgall(:, :, f));
@@ -603,7 +603,7 @@ function [normVx, normVy] = computeFlowField_normalized(imgall, sz, resizeRatio)
 
     normVx = [];
     normVy = [];
-    opticFlow = opticalFlowHS;
+    opticFlow = opticalFlowLK;
     
     for f = 1:sz(3)
         
