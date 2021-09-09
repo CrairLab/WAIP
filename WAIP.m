@@ -188,12 +188,12 @@ for n = 1:nmov
     %Get wave properties (angle, rho, vector matrices)
     angle = rp.angle;
     RHO = rp.RHO;
-    total_AVx = rp.total_AVx;
-    total_AVy = rp.total_AVy;
+    %total_AVx = rp.total_AVx;
+    %total_AVy = rp.total_AVy;
     
     %Save opticflow properties for this movie
     save([fnm(1:end-4), '_opticFlow.mat'], 'fnms', 'angle', 'normVx', 'normVy', 'RHO', ...
-        'total_ActiveMovie', 'total_AVx', 'total_AVy', '-v7.3');
+        'total_ActiveMovie', '-v7.3');
     
     clear normVx normVy total_ActiveMovie
     
@@ -302,8 +302,8 @@ function [total_ActiveMovie, rp] = ...
     
     %Initialization (placeholders)
     total_ActiveMovie = [];
-    total_AVx = [];
-    total_AVy = [];
+    %total_AVx = [];
+    %total_AVy = [];
     angle = [];
     RHO = [];
     p_Interval1 = [];
@@ -429,13 +429,13 @@ function [total_ActiveMovie, rp] = ...
             AVy = imresize(AVy, .5, 'bilinear');
  
             %Record all vectors
-            if isempty(total_AVx)
-                total_AVx = AVx;
-                total_AVy = AVy;
-            else
-                total_AVx = total_AVx + AVx;
-                total_AVy = total_AVy + AVy;
-            end
+            %if isempty(total_AVx)
+            %    total_AVx = AVx;
+            %    total_AVy = AVy;
+            %else
+            %    total_AVx = total_AVx + AVx;
+            %    total_AVy = total_AVy + AVy;
+            %end
             clear AVx AVy
             
             angle{r, n} = theta;
@@ -555,8 +555,8 @@ function [total_ActiveMovie, rp] = ...
     rp.pixel = pixel;
     rp.angle = angle;
     rp.RHO = RHO;
-    rp.total_AVx = total_AVx;
-    rp.total_AVy = total_AVy;
+    %rp.total_AVx = total_AVx;
+    %rp.total_AVy = total_AVy;
     rp.p_Interval1 = p_Interval1;
     rp.m_Interval1 = m_Interval1;
     rp.m_p_Duration = m_p_Duration;
@@ -652,7 +652,7 @@ disp(['Making ' filename '-----------'])
             mkdir(tmpPath)
 
         szZ = numel(M);
-        for fr = 1:szZ; %option:parfor
+        for fr = 1:szZ %option:parfor
             tmpFilename = fullfile(tmpPath, sprintf('img%05d.jpg',fr));
             if isempty(M(fr).colormap)
                 imwrite(M(fr).cdata,tmpFilename)
