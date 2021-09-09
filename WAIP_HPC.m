@@ -1,7 +1,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Wave Analysis Integrated Pipeline (WAIP) - Beta Version 0.0.2 (08/30/21)%    
+% Wave Analysis Integrated Pipeline (WAIP) - Beta Version 0.0.3 (09/07/21)%    
 % Author: Yixiang Wang. Email: yixiang.wang@yale.edu                      %
-% Integrating wave analysis code from Xinxin Ge                           %
+% Integrating wave analysis code from Xinxin Ge. For running on the HPC   %
 % Adapted from github.com/GXinxin/SC-Cortical-activity-detection          %
 % With substantial modifications to interface with Yixang_OOP_pipeline    %
 % Estimate optical flow using Lucas-Kanade  method (opticalFlowLK)        %
