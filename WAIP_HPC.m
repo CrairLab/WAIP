@@ -17,6 +17,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %Get the number of movies, subject to change when run on HPC
+%{
+
 if isempty(dir(('files.txt')))
     Integration.fileDetector()
 end
@@ -100,7 +102,7 @@ end
 
 % End of section
 
-
+%}
 
 %% Wave property analysis (the meat). 
 % Adapted from waveProperty_SC_regressed_selectSVD_020617.m (Xinxin Ge)
@@ -114,7 +116,7 @@ filelist = readtext('files.txt',' ');
 nmov = size(filelist,1); %# of movies
 root_dir = cd; %record the root directory
 
-
+%Subject to change
 th_set = 1.5;
 
 % Apply same thresholds to all movies unless specified otherwise
@@ -165,19 +167,19 @@ parfor n = 1:nmov
     %clear A_z;
     
     %Plot the optic flow field 
-    h = figure; imagesc(smallMask); hold on
+    h = figure('visible', 'off'); imagesc(smallMask); hold on
     quiver(mean(normVx, 3).*smallMask, mean(normVy, 3).*smallMask); axis image;
-    title(fnm(1:end-4))
+    title(fnm(1:end-4), 'Interpreter', 'none')
     set(h, 'Position', [0, 0, 1200, 900]);
     h.PaperPositionMode = 'auto';
     print([fnm(1:end-4), '_quiver'], '-dpng', '-r0')
     
     %Plot the optic flow field (further downsampled)
-    h = figure; imagesc(imresize(smallMask, .5, 'bilinear')); hold on
+    h = figure('visible', 'off'); imagesc(imresize(smallMask, .5, 'bilinear')); hold on
     quiver(imresize(mean(normVx, 3), .5, 'bilinear') .* imresize(smallMask, .5, 'bilinear'), ...
         imresize(mean(normVy, 3), .5, 'bilinear') .* imresize(smallMask, .5, 'bilinear'));
     axis image;
-    title(fnm(1:end-4))
+    title(fnm(1:end-4), 'Interpreter', 'none')
     set(h, 'Position', [0, 0, 1200, 900]);
     h.PaperPositionMode = 'auto';
     print([fnm(1:end-4), '_quiver_s'], '-dpng', '-r0')
@@ -242,13 +244,13 @@ parfor n = 1:nmov
 end
 
 %Save the summary data for this animal
-tmp = fullfile('a','b');
-tmp = tmp(2); %a trick to detect whether '\' or '/' is used in paths
-foldername = root_dir(max(find(root_dir == tmp))+1:end); %Get the animal information/ foler name
+foldername = getFoldername(cd);
 disp(['Processing at ' foldername ' is done!'])
 save([foldername, '_dataSummary.mat'], 'fnms', 'rp_total', '-v7.3');
 
+summarizeMoviesForThisAnimal(rp_total);
 
+clear all
 
 
 
@@ -462,18 +464,18 @@ function [total_ActiveMovie, rp] = ...
             angle{r, n} = theta;
             RHO{r, n} = rho;
         
-            h = figure; rose(angle{r, n});
+            h = figure('visible', 'off'); rose(angle{r, n});
             set(gca,'YDir','reverse'); % 90 degree is moving downwards
-            title(savefn);
+            title(savefn, 'Interpreter', 'none');
             saveas(h, [savefn, '_rosePlot.png'])
             
             %Plot durations and diameters of detected components
             savefn2 = [savefn, num2str(thresh)];            
-            h(1) = figure; hist(durations{r, n}, 50); xlabel('durations (frames)'); title(['thresh=', num2str(thresh)])
+            h(1) = figure('visible', 'off'); hist(durations{r, n}, 50); xlabel('durations (frames)'); title(['thresh=', num2str(thresh)])
             saveas(h(1), [savefn2, '_durations.png'])
-            h(2) = figure; hist(diameters{r, n}, 50); xlabel('diameters (pixels)'); title(['thresh=', num2str(thresh)])
+            h(2) = figure('visible', 'off'); hist(diameters{r, n}, 50); xlabel('diameters (pixels)'); title(['thresh=', num2str(thresh)])
             saveas(h(2), [savefn2, '_diameters.png'])
-            h(3) = figure; scatter(durations{r, n}, diameters{r, n}); xlabel('durations'); ylabel('diameters'); title(['thresh=', num2str(thresh)])
+            h(3) = figure('visible', 'off'); scatter(durations{r, n}, diameters{r, n}); xlabel('durations'); ylabel('diameters'); title(['thresh=', num2str(thresh)])
             saveas(h(3), [savefn2, '_duraVSdia.png'])
             
             %Reconstruct binary mov based on valid connected components
@@ -544,16 +546,16 @@ function [total_ActiveMovie, rp] = ...
             p_Interval1{r, n} = pixelInterval1;       
             meanInterval1(isnan(meanInterval1)) = 2000/frameRate;
             meanInterval1 = reshape(meanInterval1, tmpsz(1), tmpsz(2))/frameRate;
-            h = figure; imagesc(meanInterval1); colorbar; colormap jet
+            h = figure('visible', 'off'); imagesc(meanInterval1); colorbar; colormap jet
             caxis([0, 50]); axis image
-            title(savefn2);
+            title(savefn2, 'Interpreter', 'none');
             saveas(h, [savefn2, '_interval.png']);       
 
             %Plot mean durations
             meanDuration = reshape(meanDuration, tmpsz(1), tmpsz(2));
-            h = figure; imagesc(meanDuration); colorbar; colormap jet
+            h = figure('visible', 'off'); imagesc(meanDuration); colorbar; colormap jet
             caxis([0, 0.3]); axis image
-            title(savefn2);
+            title(savefn2, 'Interpreter', 'none');
             saveas(h, [savefn2, '_duration.png']);
 
             m_Interval1{r, n} = meanInterval1;
@@ -710,4 +712,173 @@ disp(['Making ' filename '-----------'])
         toc
     end
 
+end
+
+
+
+function summarizeMoviesForThisAnimal(rp_total)
+% Summarize movies for this anaimal
+% Inputs:
+%    rp_total   A cell array of region props from different movies
+
+    if ~exist('rp_total', 'var')
+        file2Load = dir('*dataSummary*');
+        load(file2Load.name);
+    end
+
+    %Get number of movies
+    nmov = size(rp_total, 2);
+    %Detect number of rois
+    field_names = fields(rp_total{1});
+    nroi = size(getfield(rp_total{1}, field_names{1}),1);
+
+    %Initialize empty cell arrays
+    re_rp = cell(nroi, nmov);
+    summary_rp = cell(nroi, 1);
+
+    for r = 1: nroi
+
+        %Empty arrays for constructing the summary_rp
+        cur_durations = [];
+        cur_diameters = [];
+        cur_roiCentr = [];
+        cur_roiArea = [];
+        cur_boundBox = [];
+        cur_pixel = [];
+        cur_angle = [];
+        cur_RHO = [];
+        cur_pinter = [];
+        cur_minter = [];
+        cur_mpdur = [];
+
+        for i = 1:nmov
+
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %Construct an reorganized struct%
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            cur_struct = rp_total{i};
+            new_struct = cur_struct;
+            %Going over all fields and update the new struct
+            for f = 1:size(field_names,1)
+                cur_field = getfield(cur_struct, field_names{f});
+                roi_field = cur_field(r);
+                new_struct = setfield(new_struct, field_names{f}, roi_field);
+            end
+            %Regroup all structs
+            re_rp{r, i} = new_struct;
+
+
+
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %Get summed structs for each roi%
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            cur_struct = re_rp{r,i};
+            cur_durations = [cur_durations; cur_struct.durations{1}];
+            cur_diameters = [cur_diameters; cur_struct.diameters{1}];
+            cur_roiCentr= [cur_roiCentr; cur_struct.roiCentr{1}];
+            cur_roiArea = [cur_roiArea cur_struct.roiArea{1}];
+            cur_boundBox = [cur_boundBox cur_struct.boundBox{1}];
+            cur_pixel = [cur_pixel cur_struct.pixel{1}];
+            cur_angle = [cur_angle cur_struct.angle{1}];
+            cur_RHO = [cur_RHO cur_struct.RHO{1}];
+            cur_pinter = [cur_pinter cur_struct.p_Interval1{1}];
+
+            if i == 1
+                cur_minter = cur_struct.m_Interval1{1};
+                cur_mpdur = cur_struct.m_p_Duration{1};
+            else
+                cur_minter = cur_minter + cur_struct.m_Interval1{1};
+                cur_mpdur = cur_mpdur + cur_struct.m_p_Duration{1};        
+            end
+
+        end
+
+        %Construct a new struct for the current roi
+        cur_roi_summary.durations = cur_durations;
+        cur_roi_summary.diameters = cur_diameters;
+        cur_roi_summary.roiCentr = cur_roiCentr;
+        cur_roi_summary.roiArea = cur_roiArea;
+        cur_roi_summary.boundBox = cur_boundBox;
+        cur_roi_summary.pixel = cur_pixel;
+        cur_roi_summary.angle = cur_angle;
+        cur_roi_summary.RHO = cur_RHO;
+        cur_roi_summary.p_Internal1 = cell2mat(cur_pinter);
+        cur_roi_summary.m_Interval1 = cur_minter./nmov; %Averaged across movies
+        cur_roi_summary.m_p_Duration = cur_mpdur./nmov; %Averaged across movies
+
+        %Expand the new struct to store averaged stats
+        cur_roi_summary.meanDurations = mean(cur_durations);
+        cur_roi_summary.meanDdiameters = mean(cur_diameters);
+        cur_roi_summary.meanRoiCentr = mean(cur_roiCentr, 1);
+        cur_roi_summary.meanRoiArea = mean(cur_roiArea);
+        cur_roi_summary.meanAngle = mean(cur_angle);
+        cur_roi_summary.meanRHO = mean(cur_RHO);
+
+        summary_rp{r, 1} = cur_roi_summary;
+
+        %Save structs
+        foldername = getFoldername(cd);
+        save([foldername, '_roi', num2str(r), '_rpSummary.mat'], 'summary_rp', '-v7.3');
+        save([foldername, '_roi', num2str(r), '_summaryReorg.mat'], 're_rp', '-v7.3');
+
+        savefn = ['summaryPlot_roi' num2str(r)];
+
+        %Rose plot normalized
+        h = figure; 
+        polarhistogram(cur_angle, 20, 'normalization', 'probability', 'LineWidth', 1);
+        thetaticks(0:45:315);
+        rticks([0.05, 0.1, 0.15])
+        rticklabels({})
+        rlim([0 0.15])
+        ax = gca;
+        ax.LineWidth = 1;
+        title(savefn, 'Interpreter', 'none');
+        saveas(h, [savefn, '_rosePlot_normalized.png'])
+
+        %Rose plot non-normalized
+        h = figure; 
+        rose(cur_angle);
+        %set(gca,'YDir','reverse'); % 90 degree is moving downwards
+        title(savefn, 'Interpreter', 'none');
+        saveas(h, [savefn, '_rosePlot.png'])
+
+        %Plot durations and diameters of detected components
+        filelist = readtext('files_wave.txt', ' ');    
+        thresh = filelist(:, 2); thresh = thresh{1};
+        savefn2 = [savefn, '_thresh_' num2str(thresh)];            
+        h(1) = figure; hist(cur_durations, 50); xlabel('durations (frames)'); title(['thresh=', num2str(thresh)])
+        saveas(h(1), [savefn2, '_durations.png'])
+        h(2) = figure; hist(cur_diameters); xlabel('diameters (pixels)'); title(['thresh=', num2str(thresh)])
+        saveas(h(2), [savefn2, '_diameters.png'])
+        h(3) = figure; scatter(cur_durations, cur_diameters); xlabel('durations'); ylabel('diameters'); title(['thresh=', num2str(thresh)])
+        saveas(h(3), [savefn2, '_duraVSdia.png'])
+
+        %Plot event interval
+        meanInterval1 = cur_roi_summary.m_Interval1; tmpsz = size(meanInterval1);
+        meanInterval1 = reshape(meanInterval1, tmpsz(1), tmpsz(2));
+        h = figure; imagesc(meanInterval1); colorbar; colormap jet
+        caxis([0, 50]); axis image
+        title(savefn2, 'Interpreter', 'none');
+        saveas(h, [savefn2, '_interval.png']);       
+
+        %Plot mean durations
+        meanDuration = cur_roi_summary.m_p_Duration;
+        meanDuration = reshape(meanDuration, tmpsz(1), tmpsz(2));
+        h = figure; imagesc(meanDuration); colorbar; colormap jet
+        caxis([0, 0.3]); axis image
+        title(savefn2, 'Interpreter', 'none');
+        saveas(h, [savefn2, '_duration.png']);
+
+    end
+
+
+end
+
+
+function foldername = getFoldername(cur_path)
+% get the foldername from input path
+% Input: current path; Output: the name of the working folder
+    tmp = fullfile('a','b');
+    tmp = tmp(2); %a trick to detect whether '\' or '/' is used in paths
+    foldername = cur_path(find(cur_path == tmp, 1, 'last' )+1:end); %Get the animal information/ foler name
 end
