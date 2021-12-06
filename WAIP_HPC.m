@@ -512,19 +512,23 @@ function [total_ActiveMovie, rp] = ...
                 activeOn{p} = find(valid_activeMov_down{r}(p, 2:end) - valid_activeMov_down{r}(p, 1:end-1) > 0) + 1;
                 activeOff{p} = find(valid_activeMov_down{r}(p, 2:end) - valid_activeMov_down{r}(p, 1:end-1) < 0);
 
-                if (isempty(activeOn{p}) + isempty(activeOff{p})) == 1
+                if (isempty(activeOn{p}) + isempty(activeOff{p})) >= 1
 
                     activeOn{p} = [];
                     activeOff{p} = [];
 
                 elseif (isempty(activeOn{p}) + isempty(activeOff{p})) == 0
+                    try
+                        if activeOn{p}(1) > activeOff{p}(1)
+                            activeOff{p} = activeOff{p}(2:end);
+                        end
 
-                    if activeOn{p}(1) > activeOff{p}(1)
-                        activeOff{p} = activeOff{p}(2:end);
-                    end
-
-                    if activeOn{p}(end) > activeOff{p}(end)
-                        activeOn{p} = activeOn{p}(1:end-1);
+                        if activeOn{p}(end) > activeOff{p}(end)
+                            activeOn{p} = activeOn{p}(1:end-1);
+                        end
+                    catch
+                        activeOn{p} = [];
+                        activeOff{p} = [];
                     end
                 end
 
