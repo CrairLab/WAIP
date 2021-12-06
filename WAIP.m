@@ -442,12 +442,12 @@ function [total_ActiveMovie, rp] = ...
             RHO{r, n} = rho;
         
             h = figure; rose(angle{r, n});
+            savefn2 = [savefn, num2str(thresh)]; 
             set(gca,'YDir','reverse'); % 90 degree is moving downwards
-            title(savefn);
-            saveas(h, [savefn, '_rosePlot.png'])
+            title(savefn2);
+            saveas(h, [savefn2, '_rosePlot.png'])
             
             %Plot durations and diameters of detected components
-            savefn2 = [savefn, num2str(thresh)];            
             h(1) = figure; hist(durations{r, n}, 50); xlabel('durations (frames)'); title(['thresh=', num2str(thresh)])
             saveas(h(1), [savefn2, '_durations.png'])
             h(2) = figure; hist(diameters{r, n}, 50); xlabel('diameters (pixels)'); title(['thresh=', num2str(thresh)])
