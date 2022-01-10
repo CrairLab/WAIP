@@ -107,7 +107,7 @@ end
 %% Wave property analysis (the meat). 
 % Adapted from waveProperty_SC_regressed_selectSVD_020617.m (Xinxin Ge)
 % See original code at https://github.com/GXinxin/SC-Cortical-activity-detection
-
+function WAIP_HPC(th_set)
 
 if isempty(dir(('files.txt')))
     Integration.fileDetector()
@@ -117,7 +117,11 @@ nmov = size(filelist,1); %# of movies
 root_dir = cd; %record the root directory
 
 %Subject to change
-th_set = 1.5;
+if ~exist('th_set', 'var')
+    th_set = 1.5;
+end
+
+disp(['Threshold is: ' num2str(th_set)])
 
 % Apply same thresholds to all movies unless specified otherwise
 th_list = ones(nmov, 1).*th_set;
@@ -250,11 +254,11 @@ save([foldername, '_dataSummary.mat'], 'fnms', 'rp_total', '-v7.3');
 
 summarizeMoviesForThisAnimal(rp_total);
 
-clear all
+clear
 
 
 
-
+end
 %% Reused functions
 
 function A_z = z_reshape(A)
@@ -465,12 +469,12 @@ function [total_ActiveMovie, rp] = ...
             RHO{r, n} = rho;
         
             h = figure('visible', 'off'); rose(angle{r, n});
+            savefn2 = [savefn, num2str(thresh)];  
             set(gca,'YDir','reverse'); % 90 degree is moving downwards
-            title(savefn, 'Interpreter', 'none');
-            saveas(h, [savefn, '_rosePlot.png'])
+            title(savefn2, 'Interpreter', 'none');
+            saveas(h, [savefn2, '_rosePlot.png'])
             
-            %Plot durations and diameters of detected components
-            savefn2 = [savefn, num2str(thresh)];            
+            %Plot durations and diameters of detected components          
             h(1) = figure('visible', 'off'); hist(durations{r, n}, 50); xlabel('durations (frames)'); title(['thresh=', num2str(thresh)])
             saveas(h(1), [savefn2, '_durations.png'])
             h(2) = figure('visible', 'off'); hist(diameters{r, n}, 50); xlabel('diameters (pixels)'); title(['thresh=', num2str(thresh)])
@@ -886,3 +890,5 @@ function foldername = getFoldername(cur_path)
     tmp = tmp(2); %a trick to detect whether '\' or '/' is used in paths
     foldername = cur_path(find(cur_path == tmp, 1, 'last' )+1:end); %Get the animal information/ foler name
 end
+
+
