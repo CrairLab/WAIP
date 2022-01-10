@@ -389,7 +389,6 @@ function [total_ActiveMovie, rp] = ...
             end
         else
             pixel = [];
-            warning()
             warning('No wave was detected in this movie, threshold is too high!')
         end
             
