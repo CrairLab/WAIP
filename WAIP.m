@@ -383,10 +383,16 @@ function [total_ActiveMovie, rp] = ...
         boundBox{r, n} = [STATS(validId{r, n}).BoundingBox];
         valid_tmp = find(validId{r, n} > 0);
         
-        for v = 1:length(valid_tmp)
-            pixel{r, n}{v} = STATS(valid_tmp(v)).PixelList;
+        if ~isempty(valid_tmp)
+            for v = 1:length(valid_tmp)
+                pixel{r, n}{v} = STATS(valid_tmp(v)).PixelList;
+            end
+        else
+            pixel = [];
+            warning()
+            warning('No wave was detected in this movie, threshold is too high!')
         end
-        
+            
         valid{r, n} = valid_tmp;
         
         
