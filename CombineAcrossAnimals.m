@@ -145,4 +145,8 @@ function generatePlots(rp_all)
     h(3) = figure; scatter(rp_all.durations, rp_all.diameters); xlabel('durations'); ylabel('diameters'); title('Durations-Diameters Plot')
     saveas(h(3), [savefn2, '_duraVSdia.png'])
     
+    %Plot roiArea
+    h(4) = figure; hist(rp_all.roiArea, 50); xlabel('#pixels'); title('Summary roi sizes')
+    saveas(h(4), [savefn2, '_roiArea.png'])
+    
 end
