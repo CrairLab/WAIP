@@ -275,8 +275,6 @@ disp(['Processing at ' foldername ' is done!'])
 save([foldername, '_dataSummary.mat'], 'fnms', 'rp_total', '-v7.3');
 
 
-clear all
-
 
 
 %% Helper functions
