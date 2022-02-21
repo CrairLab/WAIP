@@ -23,6 +23,8 @@ end
 filelist = readtext('files.txt',' ');
 nmov = size(filelist,1); %# of movies
 root_dir = cd; %record the root directory
+
+warning('Only do 3D zscoring here!!')
     
 for n = 1:nmov
     
@@ -35,7 +37,7 @@ for n = 1:nmov
         [curLoad, outputFolder, filename]  = Integration.readInSingleMatrix(movTag, n);
         imgall = curLoad.A_dFoF;
         sz = size(imgall);
-        %imgall = zscore_flat(imgall);
+        imgall = zscore_flat(imgall);
         %imgall = z_reshape(imgall);
         %imgall = zscore_flat(imgall);
         cd(outputFolder); %relocate to subfolders
@@ -158,7 +160,7 @@ for n = 1:nmov
         %Z-score the current movie
         sz = size(curLoad.A_dFoF); A_z = curLoad.A_dFoF;
         %A_z = z_reshape(A_z);
-        %A_z = zscore_flat(A_z);
+        A_z = zscore_flat(A_z);
         %A_z = reshape(A_z, sz);
         %A_z = z_reshape(curLoad.A_dFoF);
         %sz = size(A_z);
