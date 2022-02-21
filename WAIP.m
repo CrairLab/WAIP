@@ -25,55 +25,77 @@ nmov = size(filelist,1); %# of movies
 root_dir = cd; %record the root directory
     
 for n = 1:nmov
+    
+    try
   
-    %Read in the current movie
-    movTag = 'filtered';
-    [curLoad, outputFolder, filename]  = Integration.readInSingleMatrix(movTag, n);
-    imgall = curLoad.A_dFoF;
-    sz = size(imgall);
-    cd(outputFolder); %relocate to subfolders
+        %Read in the current movie
+        movTag = 'filtered';
+        [curLoad, outputFolder, filename]  = Integration.readInSingleMatrix(movTag, n);
+        imgall = curLoad.A_dFoF;
+        sz = size(imgall);
+        %imgall = zscore_flat(imgall);
+        imgall = z_reshape(imgall);
+        %imgall = zscore_flat(imgall);
+        cd(outputFolder); %relocate to subfolders
 
-    %Get disconnected rois from the loaded movie
-    roi = getRoiFromMovie(curLoad.A_dFoF);
-    clear curLoad
+        %Get disconnected rois from the loaded movie
+        roi = getRoiFromMovie(curLoad.A_dFoF);
+        clear curLoad
 
-    %Define threshold levels 
-    th = [1 1.5 2 3 5];
+        %Define threshold levels 
+        th = [];
 
-    %Iterate over various threshold levels
-    for t = 1:length(th)
+        %Iterate over various threshold levels
+        for t = 1:length(th)
 
-        %Get the current threshold
-        thresh = th(t);
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % Segmentation
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
-        dura_th = 8; % duration threshold (in frames)
-        dia_th = 8; % diameter threshold (in pixels)
-        wave_flag = 0; % do wave property analysis or not
-        
-        %Binarize and filter the movie, wave analysis optional
-        [total_ActiveMovie, ~] = ...
-            binarize_filter(imgall, thresh, roi, filename, wave_flag, dura_th, dia_th);
-      
-        %Binarize filter movies 
-        total_ActiveMovie = total_ActiveMovie > 0;
-        
-        %Construct frames for the output binary movie
-        for fr = 1:sz(3)
-            [I2, map2] = gray2ind(total_ActiveMovie(:,:,fr), 8); 
-            F(fr) = im2frame(I2,map2);  %setup the binary segmented mask movie
+            %Get the current threshold
+            thresh = th(t);
+
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            % Segmentation
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+            dura_th = 10; % duration threshold (in frames)
+            dia_th = 10; % diameter threshold (in pixels)
+            wave_flag = 0; % do wave property analysis or not
+
+            %Binarize and filter the movie, wave analysis optional
+            try
+                [total_ActiveMovie, ~] = ...
+                    binarize_filter(imgall, thresh, roi, filename, wave_flag, dura_th, dia_th);
+            catch
+                warning(['Error occurred at threshold = ' num2str(thresh)])
+                disp('Lower the threshold to 0')
+                tresh = 0;
+                [total_ActiveMovie, ~] = ...
+                    binarize_filter(imgall, thresh, roi, filename, wave_flag, dura_th, dia_th);
+            end
+
+
+            %Binarize filter movies 
+            total_ActiveMovie = total_ActiveMovie > 0;
+
+            %Construct frames for the output binary movie
+            for fr = 1:sz(3)
+                [I2, map2] = gray2ind(total_ActiveMovie(:,:,fr), 8); 
+                F(fr) = im2frame(I2,map2);  %setup the binary segmented mask movie
+            end
+            binaryName = [filename(1:end-4), '_mask_th', num2str(thresh), '.avi'];
+
+            %Write the movie
+            writeMovie_xx(F, binaryName, 0);
+
         end
-        binaryName = [filename(1:end-4), '_mask_th', num2str(thresh), '.avi'];
         
-        %Write the movie
-        writeMovie_xx(F, binaryName, 0);
-
+        %Go back to root directory
+        cd(root_dir)
+        
+    catch
+        %Back to the root directory
+        cd(root_dir)
+        warning(['Unexpected error occurred at moive #' num2str(n)])
+        disp('Skip this movie!')
     end
-    %Back to the root directory
-    cd(root_dir)
 end
 
 % Select the optimal threshold level, make a threshold list, and write the
@@ -118,108 +140,128 @@ root_dir = cd; % record the root directory
 rp_total = {}; % a holder to store all regionprop structs from different movies
     
 for n = 1:nmov
-    %Read in the current movie
-    movTag = 'filtered';
-    [curLoad, outputFolder, filename]  = Integration.readInSingleMatrix(movTag, n);
-    disp(['Working on folder #' num2str(n)])
-    fnm = filename;
-    cd(outputFolder);
-    
-    %curLoad.A_dFoF = reshape(curLoad.dA, [256, 250, 1200]);
-    
-    %Get disconnected rois from the loaded movie
-    roi = getRoiFromMovie(curLoad.A_dFoF);
-    
-    %Z-score the current movie
-    A_z = z_reshape(curLoad.A_dFoF);
-    sz = size(A_z);
-    clear curLoad
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % compute flow field
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   
-    smallSize = 0.5; % downSample the flowfield size
-    imgall = reshape(A_z, sz(1), sz(2), sz(3));    
-    
-    %Computes optic flow field (with normalized vectors) for imgall
-    %[normVx, normVy] = computeFlowField_normalized_xx(imgall, sz, smallSize);
-    [normVx, normVy] = computeFlowField_normalized(imgall, sz, smallSize);
-    totalMask = ~isnan(A_z(:,:,1));
-    smallMask = imresize(totalMask, smallSize, 'bilinear');
-    clear A_z;
-    
-    %Plot the optic flow field 
-    h = figure; imagesc(smallMask); hold on
-    quiver(mean(normVx, 3).*smallMask, mean(normVy, 3).*smallMask); axis image;
-    title(fnm(1:end-4))
-    set(h, 'Position', [0, 0, 1200, 900]);
-    h.PaperPositionMode = 'auto';
-    print([fnm(1:end-4), '_quiver'], '-dpng', '-r0')
-    
-    %Plot the optic flow field (further downsampled)
-    h = figure; imagesc(imresize(smallMask, .5, 'bilinear')); hold on
-    quiver(imresize(mean(normVx, 3), .5, 'bilinear') .* imresize(smallMask, .5, 'bilinear'), ...
-        imresize(mean(normVy, 3), .5, 'bilinear') .* imresize(smallMask, .5, 'bilinear'));
-    axis image;
-    title(fnm(1:end-4))
-    set(h, 'Position', [0, 0, 1200, 900]);
-    h.PaperPositionMode = 'auto';
-    print([fnm(1:end-4), '_quiver_s'], '-dpng', '-r0')
-    
-    %Binarize, filter, and do wave analysis on the input movie
-    wave_flag = 1; % turn on wave analysis
-    dura_th = 8;
-    dia_th = 8;
-    [total_ActiveMovie, rp] = ...
-    binarize_filter(imgall, thresh{n}, roi, filename, wave_flag, dura_th, dia_th);
+    try
+        %Read in the current movie
+        movTag = 'filtered';
+        [curLoad, outputFolder, filename]  = Integration.readInSingleMatrix(movTag, n);
+        disp(['Working on folder #' num2str(n)])
+        fnm = filename;
+        cd(outputFolder);
 
-    %Create segmented movie     
-    total_ActiveMovie = total_ActiveMovie > 0;
-    for fr = 1:sz(3)
-        [I2, map2] = gray2ind(total_ActiveMovie(:,:,fr), 8); %figure; imshow(I2,map)
-        F(fr) = im2frame(I2,map2);  %setup the binary segmented mask movie
+        %curLoad.A_dFoF = reshape(curLoad.dA, [256, 250, 1200]);
+
+        %Get disconnected rois from the loaded movie
+        roi = getRoiFromMovie(curLoad.A_dFoF);
+           
+        %Z-score the current movie
+        sz = size(curLoad.A_dFoF); A_z = curLoad.A_dFoF;
+        A_z = z_reshape(A_z);
+        %A_z = zscore_flat(A_z);
+        %A_z = reshape(A_z, sz);
+        %A_z = z_reshape(curLoad.A_dFoF);
+        %sz = size(A_z);
+        clear curLoad
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % compute flow field
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   
+        smallSize = 0.5; % downSample the flowfield size
+        imgall = reshape(A_z, sz(1), sz(2), sz(3));    
+
+        %Computes optic flow field (with normalized vectors) for imgall
+        %[normVx, normVy] = computeFlowField_normalized_xx(imgall, sz, smallSize);
+        [normVx, normVy] = computeFlowField_normalized(imgall, sz, smallSize);
+        totalMask = ~isnan(A_z(:,:,1));
+        smallMask = imresize(totalMask, smallSize, 'bilinear');
+        clear A_z;
+
+        %Plot the optic flow field 
+        h = figure; imagesc(smallMask); hold on
+        quiver(mean(normVx, 3).*smallMask, mean(normVy, 3).*smallMask); axis image;
+        title(fnm(1:end-4))
+        set(h, 'Position', [0, 0, 1200, 900]);
+        h.PaperPositionMode = 'auto';
+        print([fnm(1:end-4), '_quiver'], '-dpng', '-r0')
+
+        %Plot the optic flow field (further downsampled)
+        h = figure; imagesc(imresize(smallMask, .5, 'bilinear')); hold on
+        quiver(imresize(mean(normVx, 3), .5, 'bilinear') .* imresize(smallMask, .5, 'bilinear'), ...
+            imresize(mean(normVy, 3), .5, 'bilinear') .* imresize(smallMask, .5, 'bilinear'));
+        axis image;
+        title(fnm(1:end-4))
+        set(h, 'Position', [0, 0, 1200, 900]);
+        h.PaperPositionMode = 'auto';
+        print([fnm(1:end-4), '_quiver_s'], '-dpng', '-r0')
+
+        %Binarize, filter, and do wave analysis on the input movie
+        wave_flag = 1; % turn on wave analysis
+        dura_th = 10;
+        dia_th = 10;
+        try
+            [total_ActiveMovie, rp] = ...
+                binarize_filter(imgall, thresh{n}, roi, filename, wave_flag, dura_th, dia_th);
+        catch
+            warning(['Error occurred at threshold = ' num2str(thresh{n})])
+            disp('Lower the threshold to 0')
+            tresh{n} = 0;
+            [total_ActiveMovie, rp] = ...
+                binarize_filter(imgall, thresh{n}, roi, filename, wave_flag, dura_th, dia_th);
+        end
+
+        %Create segmented movie     
+        total_ActiveMovie = total_ActiveMovie > 0;
+        for fr = 1:sz(3)
+            [I2, map2] = gray2ind(total_ActiveMovie(:,:,fr), 8); %figure; imshow(I2,map)
+            F(fr) = im2frame(I2,map2);  %setup the binary segmented mask movie
+        end
+        fnm3 = [fnm(1:end-4), '_mask_th', num2str(thresh{n}), '.avi'];
+        writeMovie_xx(F, fnm3, 0); %output the constructed movie
+
+        %Downsample
+        total_ActiveMovie = imresize(total_ActiveMovie, .5, 'bilinear');
+
+        %Get wave properties (angle, rho, vector matrices)
+        angle = rp.angle;
+        RHO = rp.RHO;
+        %total_AVx = rp.total_AVx;
+        %total_AVy = rp.total_AVy;
+
+        %Save opticflow properties for this movie
+        save([fnm(1:end-4), '_opticFlow.mat'], 'fnms', 'angle', 'normVx', 'normVy', 'RHO', ...
+            'total_ActiveMovie', '-v7.3');
+
+        clear normVx normVy total_ActiveMovie
+
+        %Get more opticflow properties
+        validId = rp.validId;
+        durations = rp.durations ;
+        diameters = rp.diameters ;
+        roiCentr = rp.roiCentr ;
+        roiArea = rp.roiArea;
+        boundBox = rp.boundBox;
+        valid = rp.valid;
+        pixel = rp.pixel;
+
+        p_Interval1 = rp.p_Interval1;
+        m_Interval1 = rp.m_Interval1;
+        m_p_Duration = rp.m_p_Duration;
+
+        %Save all opticflow properties as a data summary file
+        save([fnm(1:end-4), '_dataSummary.mat'], 'fnms', 'p_Interval1', 'm_Interval1', ...
+        'validId', 'durations', 'diameters', 'roiCentr', 'roiArea', 'angle', 'RHO', 'm_p_Duration', 'boundBox', 'pixel', '-v7.3');
+
+        %Store the regionprop struct (opticflow properties) 
+        rp_total{n} = rp;
+        
+        %Go back to root directory
+        cd(root_dir)
+        
+    catch
+        %Go back to root directory
+        cd(root_dir)
+        warning(['Unexpected error occurred at moive #' num2str(n)])
+        disp('Skip this movie!')
     end
-    fnm3 = [fnm(1:end-4), '_mask_th', num2str(thresh{n}), '.avi'];
-    writeMovie_xx(F, fnm3, 0); %output the constructed movie
-    
-    %Downsample
-    total_ActiveMovie = imresize(total_ActiveMovie, .5, 'bilinear');
-    
-    %Get wave properties (angle, rho, vector matrices)
-    angle = rp.angle;
-    RHO = rp.RHO;
-    %total_AVx = rp.total_AVx;
-    %total_AVy = rp.total_AVy;
-    
-    %Save opticflow properties for this movie
-    save([fnm(1:end-4), '_opticFlow.mat'], 'fnms', 'angle', 'normVx', 'normVy', 'RHO', ...
-        'total_ActiveMovie', '-v7.3');
-    
-    clear normVx normVy total_ActiveMovie
-    
-    %Get more opticflow properties
-    validId = rp.validId;
-    durations = rp.durations ;
-    diameters = rp.diameters ;
-    roiCentr = rp.roiCentr ;
-    roiArea = rp.roiArea;
-    boundBox = rp.boundBox;
-    valid = rp.valid;
-    pixel = rp.pixel;
- 
-    p_Interval1 = rp.p_Interval1;
-    m_Interval1 = rp.m_Interval1;
-    m_p_Duration = rp.m_p_Duration;
-    
-    %Save all opticflow properties as a data summary file
-    save([fnm(1:end-4), '_dataSummary.mat'], 'fnms', 'p_Interval1', 'm_Interval1', ...
-    'validId', 'durations', 'diameters', 'roiCentr', 'roiArea', 'angle', 'RHO', 'm_p_Duration', 'boundBox', 'pixel', '-v7.3');
-    
-    %Store the regionprop struct (opticflow properties) 
-    rp_total{n} = rp;
-    
-    %Go back to root directory
-    cd(root_dir)
 end
 
 %Save the summary data for this animal
@@ -232,7 +274,22 @@ save([foldername, '_dataSummary.mat'], 'fnms', 'rp_total', '-v7.3');
 
 
 
-%% Reused functions
+%% Helper functions
+
+function A_z = zscore_flat(A)
+% Z-score input movie by flatenning out it to 1D first
+% Input:
+%    A   2D OR 3D dFoF movie
+% Output:
+%    A_z z-scored 3D movie
+    sz = size(A);
+    A_mean = nanmean(A(:));
+    nan_id = isnan(A);
+    A((nan_id)) = A_mean;
+    A_z = zscore(A(:));
+    A_z = reshape(A_z, sz);
+    A_z(nan_id) = nan;
+end
 
 function A_z = z_reshape(A)
 % Z-score input movie A (3D)
@@ -296,8 +353,8 @@ function [total_ActiveMovie, rp] = ...
 
     
     if nargin < 5
-        dura_th = 8;
-        dia_th = 8;
+        dura_th = 10;
+        dia_th = 10;
     end
     
     %Initialization (placeholders)
@@ -343,8 +400,8 @@ function [total_ActiveMovie, rp] = ...
         %Zscore
         subMov = reshape(subMov, sz(1) * sz(2), sz(3));
         temp_subMov = subMov(maskId, :);
-        temp_subMov = zscore(temp_subMov');
-        temp_subMov = temp_subMov';
+        temp_subMov = zscore_flat(temp_subMov);
+        %temp_subMov = temp_subMov';
         subMov = zeros(size(subMov));
         subMov(maskId, :) = temp_subMov;
 
