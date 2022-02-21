@@ -78,7 +78,7 @@ for n = 1:nmov
 
 
             %Binarize filter movies 
-            total_ActiveMovie = total_ActiveMovie > 0;
+            total_ActiveMovie = total_ActiveMovie > 0; F = [];
 
             %Construct frames for the output binary movie
             for fr = 1:sz(3)
@@ -214,7 +214,7 @@ for n = 1:nmov
         end
 
         %Create segmented movie     
-        total_ActiveMovie = total_ActiveMovie > 0;
+        total_ActiveMovie = total_ActiveMovie > 0; F = [];
         for fr = 1:sz(3)
             [I2, map2] = gray2ind(total_ActiveMovie(:,:,fr), 8); %figure; imshow(I2,map)
             F(fr) = im2frame(I2,map2);  %setup the binary segmented mask movie
