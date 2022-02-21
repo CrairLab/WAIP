@@ -26,6 +26,8 @@ root_dir = cd; %record the root directory
     
 for n = 1:nmov
     
+    break
+    
     try
   
         %Read in the current movie
@@ -34,7 +36,7 @@ for n = 1:nmov
         imgall = curLoad.A_dFoF;
         sz = size(imgall);
         %imgall = zscore_flat(imgall);
-        imgall = z_reshape(imgall);
+        %imgall = z_reshape(imgall);
         %imgall = zscore_flat(imgall);
         cd(outputFolder); %relocate to subfolders
 
@@ -43,7 +45,7 @@ for n = 1:nmov
         clear curLoad
 
         %Define threshold levels 
-        th = [];
+        th = [1 1.5 2 3];
 
         %Iterate over various threshold levels
         for t = 1:length(th)
@@ -155,7 +157,7 @@ for n = 1:nmov
            
         %Z-score the current movie
         sz = size(curLoad.A_dFoF); A_z = curLoad.A_dFoF;
-        A_z = z_reshape(A_z);
+        %A_z = z_reshape(A_z);
         %A_z = zscore_flat(A_z);
         %A_z = reshape(A_z, sz);
         %A_z = z_reshape(curLoad.A_dFoF);
