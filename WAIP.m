@@ -25,6 +25,9 @@ nmov = size(filelist,1); %# of movies
 root_dir = cd; %record the root directory
 
 warning('Only do 3D zscoring here!!')
+
+dura_th = 8; % duration threshold (in frames)
+dia_th = 10; % diameter threshold (in pixels)
     
 for n = 1:nmov
     
@@ -59,8 +62,6 @@ for n = 1:nmov
             % Segmentation
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-            dura_th = 10; % duration threshold (in frames)
-            dia_th = 10; % diameter threshold (in pixels)
             wave_flag = 0; % do wave property analysis or not
 
             %Binarize and filter the movie, wave analysis optional
@@ -199,8 +200,8 @@ for n = 1:nmov
 
         %Binarize, filter, and do wave analysis on the input movie
         wave_flag = 1; % turn on wave analysis
-        dura_th = 10;
-        dia_th = 10;
+        %dura_th = 10;
+        %dia_th = 10;
         try
             [total_ActiveMovie, rp] = ...
                 binarize_filter(imgall, thresh{n}, roi, filename, wave_flag, dura_th, dia_th);
@@ -269,12 +270,12 @@ for n = 1:nmov
 end
 
 %Save the summary data for this animal
-foldername = root_dir(max(find(root_dir == '\'))+1:end); %Get the animal information/ foler name
+foldername = root_dir(max([find(root_dir == '\'), find(root_dir == '/')])+1:end); %Get the animal information/ foler name
 disp(['Processing at ' foldername ' is done!'])
 save([foldername, '_dataSummary.mat'], 'fnms', 'rp_total', '-v7.3');
 
 
-
+clear all
 
 
 
