@@ -78,13 +78,14 @@ for n = 1:nmov
 
 
             %Binarize filter movies 
-            total_ActiveMovie = total_ActiveMovie > 0; F = [];
+            total_ActiveMovie = total_ActiveMovie > 0;
 
             %Construct frames for the output binary movie
             for fr = 1:sz(3)
                 [I2, map2] = gray2ind(total_ActiveMovie(:,:,fr), 8); 
                 F(fr) = im2frame(I2,map2);  %setup the binary segmented mask movie
             end
+            clear F
             binaryName = [filename(1:end-4), '_mask_th', num2str(thresh), '.avi'];
 
             %Write the movie
@@ -214,11 +215,12 @@ for n = 1:nmov
         end
 
         %Create segmented movie     
-        total_ActiveMovie = total_ActiveMovie > 0; F = [];
+        total_ActiveMovie = total_ActiveMovie > 0; 
         for fr = 1:sz(3)
             [I2, map2] = gray2ind(total_ActiveMovie(:,:,fr), 8); %figure; imshow(I2,map)
             F(fr) = im2frame(I2,map2);  %setup the binary segmented mask movie
         end
+        clear F
         fnm3 = [fnm(1:end-4), '_mask_th', num2str(thresh{n}), '.avi'];
         writeMovie_xx(F, fnm3, 0); %output the constructed movie
 
