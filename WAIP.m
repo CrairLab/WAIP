@@ -210,7 +210,7 @@ for n = 1:nmov
         catch
             warning(['Error occurred at threshold = ' num2str(thresh{n})])
             disp('Lower the threshold to 0')
-            tresh{n} = 0;
+            thresh{n} = 0;
             [total_ActiveMovie, rp] = ...
                 binarize_filter(imgall, thresh{n}, roi, filename, wave_flag, dura_th, dia_th);
         end
