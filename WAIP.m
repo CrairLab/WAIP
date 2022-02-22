@@ -85,11 +85,12 @@ for n = 1:nmov
                 [I2, map2] = gray2ind(total_ActiveMovie(:,:,fr), 8); 
                 F(fr) = im2frame(I2,map2);  %setup the binary segmented mask movie
             end
-            clear F
+            
             binaryName = [filename(1:end-4), '_mask_th', num2str(thresh), '.avi'];
 
             %Write the movie
             writeMovie_xx(F, binaryName, 0);
+            clear F
 
         end
         
@@ -220,9 +221,10 @@ for n = 1:nmov
             [I2, map2] = gray2ind(total_ActiveMovie(:,:,fr), 8); %figure; imshow(I2,map)
             F(fr) = im2frame(I2,map2);  %setup the binary segmented mask movie
         end
-        clear F
+        
         fnm3 = [fnm(1:end-4), '_mask_th', num2str(thresh{n}), '.avi'];
         writeMovie_xx(F, fnm3, 0); %output the constructed movie
+        clear F
 
         %Downsample
         total_ActiveMovie = imresize(total_ActiveMovie, .5, 'bilinear');
