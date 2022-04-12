@@ -6,7 +6,6 @@
 DirList = readtext('summary_dirs.txt', ' ');
 folderList = DirList(:, 1);
 magList = DirList(:, 2); %Magnification list
-curdir = pwd;
 curdir = pwd; fileList = dir('*.mat');
 
 nDir = size(DirList, 1);
